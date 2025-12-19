@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row justify-content-center mt-5">
+    <div class="col-md-8">
+        <div class="card shadow border-success">
+            <div class="card-header bg-success text-white">
+                <h4 class="mb-0">🎉 注册成功！</h4>
+            </div>
+            <div class="card-body text-center p-5">
+                <h2 class="text-success mb-4">账号已创建</h2>
+                <p class="lead">激活邮件已发送至您的邮箱：<strong>{{ user.email }}</strong></p>
+                <div class="alert alert-warning mt-4">
+                    <strong>提示：</strong> 请登录您的邮箱，点击邮件中的激活链接。激活前您将无法登录系统。
+                </div>
+                <hr>
+                <p class="text-muted small">演示提示：如果您使用的是控制台模式，请在 PyCharm 终端查看链接；如果您配置了真实邮箱，请检查收件箱或垃圾箱。</p>
+                <a href="{% url 'login' %}" class="btn btn-outline-primary mt-3">去登录页面</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

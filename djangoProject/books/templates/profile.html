@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3>我的借阅清单</h3>
+    <span class="badge bg-primary">当前已借阅: {{ records.count }} 本</span>
+</div>
+
+<div class="card shadow-sm text-center">
+    <table class="table table-hover mb-0">
+        <thead class="table-dark">
+            <tr>
+                <th>书名</th>
+                <th>借阅时间</th>
+                <th>应还日期</th> <!-- 新增的表头 -->
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for r in records %}
+            <tr>
+                <td class="align-middle text-start ps-4"><strong>{{ r.book.title }}</strong></td>
+                <td class="align-middle text-muted">{{ r.borrow_date|date:"Y-m-d H:i" }}</td>
+
+                <!-- 放置逻辑代码的位置 -->
+                <td class="align-middle text-center">
+                    {% if r.status == "overdue" %}
+                        <!-- 已过期的显示：红色 -->
+                        <div class="text-danger fw-bold">
+                            <span class="d-block">已超期 {{ r.days_left|stringformat:"i"|slice:"1:" }} 天</span>
+                            <small class="text-muted">应还：{{ r.due_date|date:"Y-m-d" }}</small>
+                        </div>
+                    {% elif r.status == "urgent" %}
+                        <!-- 3天内到期的显示：橙色/黄色 -->
+                        <div class="text-warning fw-bold">
+                            <span class="d-block">仅剩 {{ r.days_left }} 天</span>
+                            <small class="text-muted text-decoration-underline">请尽快归还</small>
+                        </div>
+                    {% else %}
+                        <!-- 正常期限显示：绿色 -->
+                        <div class="text-success">
+                            <span class="d-block">还剩 {{ r.days_left }} 天</span>
+                            <small class="text-muted">{{ r.due_date|date:"Y-m-d" }}</small>
+                        </div>
+                    {% endif %}
+                </td>
+
+                <td class="align-middle">
+                    <a href="{% url 'return_book' r.id %}"
+                       class="btn btn-danger btn-sm"
+                       onclick="return confirm('确定现在归还《{{ r.book.title }}》吗？')">归还图书</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="4" class="text-center p-5 text-muted">暂无借阅记录，快去借一本书吧！</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

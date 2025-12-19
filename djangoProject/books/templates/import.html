@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="card p-4">
+    <h3>批量导入书籍</h3>
+    <p class="text-muted">请上传一个 CSV 文件，包含列名：title, author, isbn, stock</p>
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <input type="file" name="file" class="form-control mb-3">
+        <button type="submit" class="btn btn-primary">开始上传</button>
+    </form>
+</div>
+{% endblock %}
