@@ -361,12 +361,15 @@
                                 <i class="fas fa-times-circle"></i> 缺货
                             {% endif %}
                         </span>
-                        {% if user.is_authenticated and book.stock > 0 %}
-                        <form method="POST" action="{% url 'borrow_book' book.id %}">
-                            {% csrf_token %}
-                            <button type="submit" class="borrow-btn">借阅</button>
-                        </form>
-                        {% endif %}
+                        <div>
+                            <a href="{% url 'book_detail' book.id %}" class="btn btn-outline-primary btn-sm me-1" style="font-size: 0.8rem; padding: 6px 12px;">详情</a>
+                            {% if user.is_authenticated and book.stock > 0 %}
+                            <form method="POST" action="{% url 'borrow_book' book.id %}" style="display:inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="borrow-btn">借阅</button>
+                            </form>
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -402,12 +405,15 @@
                                 <i class="fas fa-times-circle"></i> 缺货
                             {% endif %}
                         </span>
-                        {% if user.is_authenticated and book.stock > 0 %}
-                        <form method="POST" action="{% url 'borrow_book' book.id %}">
-                            {% csrf_token %}
-                            <button type="submit" class="borrow-btn">借阅</button>
-                        </form>
-                        {% endif %}
+                        <div>
+                            <a href="{% url 'book_detail' book.id %}" class="btn btn-outline-primary btn-sm me-1" style="font-size: 0.8rem; padding: 6px 12px;">详情</a>
+                            {% if user.is_authenticated and book.stock > 0 %}
+                            <form method="POST" action="{% url 'borrow_book' book.id %}" style="display:inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="borrow-btn">借阅</button>
+                            </form>
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
             </div>

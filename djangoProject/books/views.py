@@ -13,9 +13,10 @@ import json
 from django.core.serializers.json import DjangoJSONEncoder
 from django.contrib.sites.shortcuts import get_current_site
 from django.core.mail import send_mail
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.core.signing import dumps, loads
 from django.contrib.auth.models import User
+from .utils.rag import get_rag_assistant
 # 首页和搜索
 def index(request):
     query = request.GET.get('q', '')
@@ -25,6 +26,12 @@ def index(request):
     recommendations = Book.objects.order_by('-stock')[:3]
 
     return render(request, 'index.html', {'books': books, 'query': query, 'recommendations': recommendations})
+
+
+# 书籍详情页
+def book_detail(request, book_id):
+    book = get_object_or_404(Book, id=book_id)
+    return render(request, 'book_detail.html', {'book': book})
 
 
 
@@ -148,3 +155,41 @@ def activate(request, token):
     except Exception as e:
         # 如果 token 过期或无效
         return render(request, 'registration/activate_fail.html')
+
+
+# AI 聊天 API
+@csrf_exempt
+def chat_api(request):
+    """
+    AI 问答 API
+    接收 POST 请求，返回 JSON 格式的回答
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': '仅支持 POST 请求'}, status=405)
+    
+    try:
+        # 解析请求
+        data = json.loads(request.body)
+        question = data.get('question', '').strip()
+        
+        if not question:
+            return JsonResponse({'error': '请输入问题'}, status=400)
+        
+        # 调用 RAG 助手
+        rag_assistant = get_rag_assistant()
+        result = rag_assistant.query_books(question)
+        
+        return JsonResponse({
+            'success': True,
+            'answer': result['answer'],
+            'books': result['books'],
+            'total_found': result['total_found']
+        })
+    
+    except json.JSONDecodeError:
+        return JsonResponse({'error': '无效的 JSON 格式'}, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'error': f'服务器错误: {str(e)}',
+            'hint': '请确认 OPENAI_API_KEY 已正确配置，并且已运行 python manage.py build_embeddings'
+        }, status=500)

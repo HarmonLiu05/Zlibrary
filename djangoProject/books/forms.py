@@ -13,11 +13,15 @@ class UserRegisterForm(UserCreationForm):
 class BookForm(forms.ModelForm):
     class Meta:
         model = Book
-        fields = ['title', 'author', 'isbn', 'stock', 'cover_image']
+        fields = ['title', 'author', 'isbn', 'category', 'publisher', 'publish_date', 'stock', 'cover_image', 'description']
         labels = {
             'title': '书名',
             'author': '作者',
             'isbn': 'ISBN',
+            'category': '分类',
+            'publisher': '出版社',
+            'publish_date': '出版日期',
             'stock': '库存',
-            'cover_image': '封面图片'
+            'cover_image': '封面图片',
+            'description': '内容简介',
         }
