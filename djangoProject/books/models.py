@@ -8,6 +8,7 @@ class Book(models.Model):
     isbn = models.CharField('ISBN', max_length=20, unique=True)
     category = models.CharField('分类', max_length=50, default='综合')
     stock = models.IntegerField('库存', default=1)
+    cover_image = models.ImageField('封面图片', upload_to='book_covers/', null=True, blank=True, default='book_covers/default_cover.svg')
 
     def __str__(self):
         return self.title

@@ -1,5 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.csrf import csrf_exempt
 from .models import Book, BorrowRecord
 from django.db.models import Q
 from django.utils import timezone
@@ -26,15 +27,7 @@ def index(request):
     return render(request, 'index.html', {'books': books, 'query': query, 'recommendations': recommendations})
 
 
-# 借书
-@login_required
-def borrow_book(request, book_id):
-    book = Book.objects.get(id=book_id)
-    if book.stock > 0:
-        BorrowRecord.objects.create(user=request.user, book=book)
-        book.stock -= 1
-        book.save()
-    return redirect('index')
+
 
 
 # 还书
@@ -128,17 +121,19 @@ def register(request):
         form = UserRegisterForm()
     return render(request, 'registration/register.html', {'form': form})
 
-# 修改借书逻辑，增加库存不足提醒
+# 修改借书逻辑，增加库存不足提醒、请求方法验证和 CSRF 保护
 @login_required
+@csrf_exempt
 def borrow_book(request, book_id):
-    book = get_object_or_404(Book, id=book_id)
-    if book.stock > 0:
-        BorrowRecord.objects.create(user=request.user, book=book)
-        book.stock -= 1
-        book.save()
-        messages.success(request, f'成功借阅《{book.title}》！')
-    else:
-        messages.error(request, '抱歉，该书库存不足！')
+    if request.method == 'POST':
+        book = get_object_or_404(Book, id=book_id)
+        if book.stock > 0:
+            BorrowRecord.objects.create(user=request.user, book=book)
+            book.stock -= 1
+            book.save()
+            messages.success(request, f'成功借阅《{book.title}》！')
+        else:
+            messages.error(request, '抱歉，该书库存不足！')
     return redirect('index')
 
 def activate(request, token):

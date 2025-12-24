@@ -1,77 +1,437 @@
 {% extends 'base.html' %}
-
 {% block content %}
-<!-- 1. 顶部消息提醒（借书成功或库存不足时弹出） -->
-{% if messages %}
-    {% for message in messages %}
-        <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm" role="alert">
-            {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    {% endfor %}
-{% endif %}
+<style>
+    .header-announcement {
+        background: #fff3cd;
+        color: #856404;
+        padding: 0.75rem 0;
+        text-align: center;
+        font-size: 0.9rem;
+    }
 
-<!-- 2. 搜索框（带搜索按钮） -->
-<div class="row mb-4">
-    <div class="col-md-12">
-        <form action="" method="get">
-            <div class="input-group input-group-lg shadow-sm">
-                <input type="text" name="q" class="form-control" placeholder="输入书名或作者进行搜索..." value="{{ query }}">
-                <button class="btn btn-primary" type="submit px-4">搜索书籍</button>
+    .header-announcement a {
+        color: #856404;
+        font-weight: bold;
+        text-decoration: underline;
+    }
+
+    header {
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        color: white;
+        padding: 3rem 0;
+        text-align: center;
+    }
+
+    header h1 {
+        font-size: 4rem;
+        font-weight: 300;
+        margin-bottom: 0.5rem;
+        letter-spacing: -2px;
+        font-family: 'Arial', sans-serif;
+    }
+
+    header p {
+        font-size: 1.1rem;
+        opacity: 0.9;
+        font-style: italic;
+    }
+
+    .search-container {
+        background: white;
+        padding: 2.5rem;
+        margin: -2rem auto 3rem;
+        border-radius: 12px;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+        max-width: 900px;
+    }
+
+    .search-group {
+        display: flex;
+        gap: 0;
+        margin-bottom: 1.5rem;
+        border: 2px solid #e1e5e9;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+    .search-input {
+        flex: 1;
+        padding: 15px 20px;
+        border: none;
+        font-size: 1.1rem;
+        background: white;
+    }
+
+    .search-input:focus {
+        outline: none;
+        border-color: #007bff;
+    }
+
+    .search-button {
+        padding: 15px 30px;
+        background: #007bff;
+        color: white;
+        border: none;
+        cursor: pointer;
+        font-size: 1.1rem;
+        transition: background-color 0.3s;
+    }
+
+    .search-button:hover {
+        background: #0056b3;
+    }
+
+    .filters {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .filter-btn {
+        padding: 8px 16px;
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 20px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        transition: all 0.3s;
+    }
+
+    .filter-btn.active, .filter-btn:hover {
+        background: #007bff;
+        color: white;
+        border-color: #007bff;
+    }
+
+    .section {
+        margin-bottom: 4rem;
+    }
+
+    .section h2 {
+        font-size: 2rem;
+        margin-bottom: 2rem;
+        color: #2c3e50;
+        font-weight: 400;
+        position: relative;
+        padding-bottom: 0.5rem;
+    }
+
+    .section h2::after {
+        content: '';
+        position: absolute;
+        left: 0;
+        bottom: 0;
+        width: 60px;
+        height: 3px;
+        background: linear-gradient(90deg, #007bff, #0056b3);
+        border-radius: 2px;
+    }
+
+    .books-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 2.5rem;
+    }
+
+    .book-card {
+        background: white;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        cursor: pointer;
+        text-align: center;
+    }
+
+    .book-card:hover {
+        transform: translateY(-10px);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
+    }
+
+    .book-cover-container {
+        position: relative;
+        overflow: hidden;
+    }
+
+    .book-cover {
+        width: 100%;
+        height: 300px;
+        object-fit: cover;
+        background-color: #f8f9fa;
+        transition: transform 0.4s ease;
+    }
+
+    .book-card:hover .book-cover {
+        transform: scale(1.05);
+    }
+
+    .book-badge {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: rgba(0, 123, 255, 0.9);
+        color: white;
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: bold;
+    }
+
+    .book-info {
+        padding: 1.5rem 1rem;
+    }
+
+    .book-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        color: #2c3e50;
+        line-height: 1.3;
+        height: 3rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .book-author {
+        color: #6c757d;
+        margin-bottom: 0.5rem;
+        font-size: 0.9rem;
+        font-style: italic;
+    }
+
+    .book-isbn {
+        color: #adb5bd;
+        font-size: 0.8rem;
+        margin-bottom: 1rem;
+    }
+
+    .book-details {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 1rem;
+    }
+
+    .book-stock {
+        font-size: 0.85rem;
+        color: #28a745;
+        font-weight: 500;
+    }
+
+    .borrow-btn {
+        padding: 8px 16px;
+        background: #28a745;
+        color: white;
+        border: none;
+        border-radius: 20px;
+        cursor: pointer;
+        font-size: 0.85rem;
+        transition: all 0.3s;
+        font-weight: 500;
+    }
+
+    .borrow-btn:hover {
+        background: #218838;
+        transform: scale(1.05);
+    }
+
+    .borrow-btn:disabled {
+        background: #6c757d;
+        cursor: not-allowed;
+    }
+
+    .no-results {
+        text-align: center;
+        padding: 5rem 2rem;
+        color: #6c757d;
+    }
+
+    .no-results i {
+        font-size: 5rem;
+        margin-bottom: 1.5rem;
+        opacity: 0.4;
+    }
+
+    footer {
+        background: #2c3e50;
+        color: white;
+        text-align: center;
+        padding: 3rem 0;
+        margin-top: 6rem;
+    }
+
+    .footer-links {
+        margin-bottom: 1rem;
+    }
+
+    .footer-links a {
+        color: #a0aec0;
+        text-decoration: none;
+        margin: 0 1rem;
+        font-size: 0.9rem;
+        transition: color 0.3s;
+    }
+
+    .footer-links a:hover {
+        color: white;
+    }
+
+    @media (max-width: 768px) {
+        .books-grid {
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 1.5rem;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+        }
+
+        .search-container {
+            padding: 1.5rem;
+        }
+
+        .book-title {
+            font-size: 1rem;
+            height: 2.5rem;
+        }
+    }
+</style>
+
+<div class="header-announcement">
+    <div class="container">
+        <span>发现您喜欢的书籍，尽情阅读！</span> <a href="#">探索 BookNest 的精彩内容</a> <i class="fas fa-times"></i>
+    </div>
+</div>
+
+<header>
+    <div class="container">
+        <h1>BookNest</h1>
+        <p>您的私人数字图书馆。每个人都能免费使用。</p>
+    </div>
+</header>
+
+<div class="search-container">
+    <div class="container">
+        <form method="GET" action="">
+            <div class="search-group">
+                <input type="text" name="q" class="search-input" placeholder="按书名、作者、ISBN、DOI、OCLC 号码、关键词搜索..." value="{{ request.GET.q }}">
+                <button type="submit" class="search-button">
+                    <i class="fas fa-search"></i> 搜索
+                </button>
+            </div>
+            <div class="filters">
+                <span style="margin-right: 0.5rem;">搜索范围：</span>
+                <button type="button" class="filter-btn active">全部</button>
+                <button type="button" class="filter-btn">书名</button>
+                <button type="button" class="filter-btn">作者</button>
+                <button type="button" class="filter-btn">ISBN</button>
             </div>
         </form>
     </div>
 </div>
 
-<!-- 3. AI 推荐区域 -->
-<div class="mb-5">
-    <h4 class="mb-3" style="border-left: 5px solid #0d6efd; padding-left: 10px;">AI 智能推荐 (热门书籍)</h4>
-    <div class="row">
-        {% for book in recommendations %}
-        <div class="col-md-4 mb-3">
-            <div class="card h-100 border-primary shadow-sm">
-                <div class="card-body">
-                    <h5 class="card-title text-primary">{{ book.title }}</h5>
-                    <p class="card-text text-muted small">作者：{{ book.author }}</p>
-                    <div class="d-flex justify-content-between align-items-center">
-                        <span class="badge bg-info">当前库存: {{ book.stock }}</span>
-                        <a href="{% url 'borrow_book' book.id %}" class="btn btn-sm btn-outline-primary" onclick="return confirm('确定借阅《{{ book.title }}》吗？')">借阅</a>
+<div class="container">
+    {% if recommendations %}
+    <div class="section">
+        <h2><i class="fas fa-fire"></i> 最受欢迎</h2>
+        <div class="books-grid">
+            {% for book in recommendations %}
+            <div class="book-card">
+                <div class="book-cover-container">
+                    {% if book.cover_image %}
+                        <img src="{{ book.cover_image.url }}" alt="{{ book.title }} 的封面" class="book-cover">
+                    {% else %}
+                        <div class="book-cover" style="display: flex; align-items: center; justify-content: center; font-size: 4rem; color: #ccc;">
+                            <i class="fas fa-book"></i>
+                        </div>
+                    {% endif %}
+                    <span class="book-badge">热门</span>
+                </div>
+                <div class="book-info">
+                    <div class="book-title">{{ book.title }}</div>
+                    <div class="book-author">作者: {{ book.author }}</div>
+                    <div class="book-isbn">ISBN: {{ book.isbn }}</div>
+                    <div class="book-details">
+                        <span class="book-stock">
+                            {% if book.stock > 0 %}
+                                <i class="fas fa-check-circle"></i> 有货
+                            {% else %}
+                                <i class="fas fa-times-circle"></i> 缺货
+                            {% endif %}
+                        </span>
+                        {% if user.is_authenticated and book.stock > 0 %}
+                        <form method="POST" action="{% url 'borrow_book' book.id %}">
+                            {% csrf_token %}
+                            <button type="submit" class="borrow-btn">借阅</button>
+                        </form>
+                        {% endif %}
                     </div>
                 </div>
             </div>
+            {% endfor %}
         </div>
-        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="section">
+        <h2><i class="fas fa-list"></i> 全部书籍</h2>
+        {% if books %} 
+        <div class="books-grid">
+            {% for book in books %}
+            <div class="book-card">
+                <div class="book-cover-container">
+                    {% if book.cover_image %}
+                        <img src="{{ book.cover_image.url }}" alt="{{ book.title }} 的封面" class="book-cover">
+                    {% else %}
+                        <div class="book-cover" style="display: flex; align-items: center; justify-content: center; font-size: 4rem; color: #ccc;">
+                            <i class="fas fa-book"></i>
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="book-info">
+                    <div class="book-title">{{ book.title }}</div>
+                    <div class="book-author">作者: {{ book.author }}</div>
+                    <div class="book-isbn">ISBN: {{ book.isbn }}</div>
+                    <div class="book-details">
+                        <span class="book-stock">
+                            {% if book.stock > 0 %}
+                                <i class="fas fa-check-circle"></i> 有货
+                            {% else %}
+                                <i class="fas fa-times-circle"></i> 缺货
+                            {% endif %}
+                        </span>
+                        {% if user.is_authenticated and book.stock > 0 %}
+                        <form method="POST" action="{% url 'borrow_book' book.id %}">
+                            {% csrf_token %}
+                            <button type="submit" class="borrow-btn">借阅</button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="no-results">
+            <i class="fas fa-search"></i>
+            <h3>没有找到匹配的书籍</h3>
+            <p>请尝试使用其他关键词或搜索范围</p>
+        </div>
+        {% endif %}
     </div>
 </div>
 
-<!-- 4. 全部书籍列表 -->
-<div class="card shadow">
-    <div class="card-header bg-white">
-        <h4 class="mb-0">图书馆藏清单</h4>
-    </div>
-    <div class="list-group list-group-flush">
-        {% for book in books %}
-        <div class="list-group-item p-3 d-flex justify-content-between align-items-center">
-            <div>
-                <h5 class="mb-1">{{ book.title }}</h5>
-                <p class="mb-0 text-muted small">作者：{{ book.author }} | ISBN：{{ book.isbn }} | 分类：{{ book.category }}</p>
-            </div>
-            <div class="text-end">
-                <div class="mb-2">库存：<span class="fw-bold">{{ book.stock }}</span></div>
-                {% if book.stock > 0 %}
-                    <a href="{% url 'borrow_book' book.id %}"
-                       class="btn btn-success btn-sm px-4"
-                       onclick="return confirm('确定要借阅《{{ book.title }}》吗？')">立即借阅</a>
-                {% else %}
-                    <button class="btn btn-secondary btn-sm px-4" disabled>暂时无货</button>
-                {% endif %}
-            </div>
+<footer>
+    <div class="container">
+        <div class="footer-links">
+            <a href="#">关于 BookNest</a>
+            <a href="#">联系方式</a>
+            <a href="#">隐私政策</a>
+            <a href="#">服务条款</a>
         </div>
-        {% empty %}
-        <div class="p-5 text-center text-muted">
-            没有找到相关书籍。
-        </div>
-        {% endfor %}
+        <p>&copy; 2024 BookNest 管理系统. 您的私人数字图书馆.</p>
     </div>
-</div>
+</footer>
 {% endblock %}
