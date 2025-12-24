@@ -1,6 +1,7 @@
 from django import forms
 from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm
+from .models import Book
 
 class UserRegisterForm(UserCreationForm):
     email = forms.EmailField(required=True, help_text="请输入真实邮箱以接收激活链接")
@@ -8,3 +9,19 @@ class UserRegisterForm(UserCreationForm):
     class Meta:
         model = User
         fields = ['username', 'email'] # 注册时显示用户名和邮箱
+
+class BookForm(forms.ModelForm):
+    class Meta:
+        model = Book
+        fields = ['title', 'author', 'isbn', 'category', 'publisher', 'publish_date', 'stock', 'cover_image', 'description']
+        labels = {
+            'title': '书名',
+            'author': '作者',
+            'isbn': 'ISBN',
+            'category': '分类',
+            'publisher': '出版社',
+            'publish_date': '出版日期',
+            'stock': '库存',
+            'cover_image': '封面图片',
+            'description': '内容简介',
+        }

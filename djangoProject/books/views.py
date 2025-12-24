@@ -1,5 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.csrf import csrf_exempt
 from .models import Book, BorrowRecord
 from django.db.models import Q
 from django.utils import timezone
@@ -12,9 +13,10 @@ import json
 from django.core.serializers.json import DjangoJSONEncoder
 from django.contrib.sites.shortcuts import get_current_site
 from django.core.mail import send_mail
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.core.signing import dumps, loads
 from django.contrib.auth.models import User
+from .utils.rag import get_rag_assistant
 # 首页和搜索
 def index(request):
     query = request.GET.get('q', '')
@@ -26,15 +28,13 @@ def index(request):
     return render(request, 'index.html', {'books': books, 'query': query, 'recommendations': recommendations})
 
 
-# 借书
-@login_required
-def borrow_book(request, book_id):
-    book = Book.objects.get(id=book_id)
-    if book.stock > 0:
-        BorrowRecord.objects.create(user=request.user, book=book)
-        book.stock -= 1
-        book.save()
-    return redirect('index')
+# 书籍详情页
+def book_detail(request, book_id):
+    book = get_object_or_404(Book, id=book_id)
+    return render(request, 'book_detail.html', {'book': book})
+
+
+
 
 
 # 还书
@@ -128,17 +128,19 @@ def register(request):
         form = UserRegisterForm()
     return render(request, 'registration/register.html', {'form': form})
 
-# 修改借书逻辑，增加库存不足提醒
+# 修改借书逻辑，增加库存不足提醒、请求方法验证和 CSRF 保护
 @login_required
+@csrf_exempt
 def borrow_book(request, book_id):
-    book = get_object_or_404(Book, id=book_id)
-    if book.stock > 0:
-        BorrowRecord.objects.create(user=request.user, book=book)
-        book.stock -= 1
-        book.save()
-        messages.success(request, f'成功借阅《{book.title}》！')
-    else:
-        messages.error(request, '抱歉，该书库存不足！')
+    if request.method == 'POST':
+        book = get_object_or_404(Book, id=book_id)
+        if book.stock > 0:
+            BorrowRecord.objects.create(user=request.user, book=book)
+            book.stock -= 1
+            book.save()
+            messages.success(request, f'成功借阅《{book.title}》！')
+        else:
+            messages.error(request, '抱歉，该书库存不足！')
     return redirect('index')
 
 def activate(request, token):
@@ -153,3 +155,41 @@ def activate(request, token):
     except Exception as e:
         # 如果 token 过期或无效
         return render(request, 'registration/activate_fail.html')
+
+
+# AI 聊天 API
+@csrf_exempt
+def chat_api(request):
+    """
+    AI 问答 API
+    接收 POST 请求，返回 JSON 格式的回答
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': '仅支持 POST 请求'}, status=405)
+    
+    try:
+        # 解析请求
+        data = json.loads(request.body)
+        question = data.get('question', '').strip()
+        
+        if not question:
+            return JsonResponse({'error': '请输入问题'}, status=400)
+        
+        # 调用 RAG 助手
+        rag_assistant = get_rag_assistant()
+        result = rag_assistant.query_books(question)
+        
+        return JsonResponse({
+            'success': True,
+            'answer': result['answer'],
+            'books': result['books'],
+            'total_found': result['total_found']
+        })
+    
+    except json.JSONDecodeError:
+        return JsonResponse({'error': '无效的 JSON 格式'}, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'error': f'服务器错误: {str(e)}',
+            'hint': '请确认 OPENAI_API_KEY 已正确配置，并且已运行 python manage.py build_embeddings'
+        }, status=500)
