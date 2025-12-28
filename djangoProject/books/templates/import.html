@@ -5,7 +5,22 @@
     <p class="text-muted">请上传一个 CSV 文件，包含列名：title, author, isbn, stock</p>
     <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
-        <input type="file" name="file" class="form-control mb-3">
+        <div class="mb-3">
+            <label for="file" class="form-label">CSV文件</label>
+            <input type="file" name="file" class="form-control" id="file" accept=".csv" required>
+            <div class="form-text">
+                支持的字段：<br>
+                - 必填：title, author, isbn, stock<br>
+                - 可选：category, publisher, publish_date, description, image_url（图片链接）<br>
+                示例：title,author,isbn,stock,image_url<br>
+                Python编程从入门到实践,埃里克·马瑟斯,9787115428028,5,https://img3.doubanio.com/view/subject/s/public/s29524036.jpg
+            </div>
+        </div>
+        <div class="mb-3">
+            <label for="images_zip" class="form-label">图片压缩包（可选，与image_url二选一）</label>
+            <input type="file" name="images_zip" class="form-control" id="images_zip" accept=".zip">
+            <div class="form-text">图片文件名必须与ISBN号一致（如：9787115428028.jpg），支持格式：jpg、jpeg、png、gif、svg</div>
+        </div>
         <button type="submit" class="btn btn-primary">开始上传</button>
     </form>
 </div>

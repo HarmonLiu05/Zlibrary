@@ -10,5 +10,5 @@ urlpatterns = [
     path('import/', views.bulk_import, name='bulk_import'),
     path('register/', views.register, name='register'),
     path('activate/<str:token>/', views.activate, name='activate'),
-    path('api/chat/', views.chat_api, name='chat_api'),  # AI 聊天 API
+    path('api/chat/', views.chat_api, name='chat_api'),  # AI聊天API
 ]

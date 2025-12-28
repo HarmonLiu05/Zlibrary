@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="referrer" content="no-referrer">
     {% csrf_token %}
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -189,12 +190,41 @@
         }
         .typing-indicator {
             display: none;
-            padding: 10px;
-            color: #666;
-            font-style: italic;
+            padding: 12px 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 8px;
+            margin: 10px 15px;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
         }
         .typing-indicator.active {
             display: block;
+            animation: fadeIn 0.3s ease-in;
+        }
+        .typing-content {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .typing-content i {
+            font-size: 16px;
+        }
+        .waiting-time {
+            color: #ffd700;
+            font-weight: bold;
+            margin-left: 5px;
+        }
+        .typing-hint {
+            font-size: 11px;
+            opacity: 0.9;
+            margin-top: 5px;
+            padding-left: 24px;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
     </style>
 </head>
@@ -258,12 +288,18 @@
                         👋 你好！我是 BookNest 的 AI 助手。你可以问我关于书籍的问题，比如：<br>
                         • “有没有适合新手的 Python 书？”<br>
                         • “推荐几本机器学习的书籍”<br>
-                        • “有哪些小说类的书？”
+                        • “有哪些小说类的书？”<br><br>
+                        <span style="color: #ff6b6b; font-size: 12px;">⚠️ 温馨提示：因使用 ModelScope API，响应需要 5-15 秒，请耐心等待~</span>
                     </div>
                 </div>
             </div>
             <div class="typing-indicator" id="typingIndicator">
-                <i class="fas fa-spinner fa-spin"></i> AI 正在思考...
+                <div class="typing-content">
+                    <i class="fas fa-spinner fa-spin"></i> 
+                    <span id="typingText">AI 正在思考中...</span>
+                    <span id="waitingTime" class="waiting-time"></span>
+                </div>
+                <div class="typing-hint">💡 使用 ModelScope API，预计需要 5-15 秒</div>
             </div>
             <div class="chat-input-area">
                 <div class="chat-input-group">
@@ -307,9 +343,29 @@
             sendBtn.disabled = true;
             input.disabled = true;
             
-            // 显示加载中
+            // 显示加载中并启动计时器
             const typingIndicator = document.getElementById('typingIndicator');
             typingIndicator.classList.add('active');
+            
+            // 启动等待时间计时器
+            let waitSeconds = 0;
+            const waitingTimeEl = document.getElementById('waitingTime');
+            const typingTextEl = document.getElementById('typingText');
+            const timer = setInterval(() => {
+                waitSeconds++;
+                waitingTimeEl.textContent = `(${waitSeconds}秒)`;
+                
+                // 根据等待时间更新提示文本
+                if (waitSeconds <= 5) {
+                    typingTextEl.textContent = 'AI 正在思考中...';
+                } else if (waitSeconds <= 10) {
+                    typingTextEl.textContent = 'AI 正在努力生成回答...';
+                } else if (waitSeconds <= 15) {
+                    typingTextEl.textContent = '请稍候，马上就好...';
+                } else {
+                    typingTextEl.textContent = '感谢您的耐心等待...';
+                }
+            }, 1000);
             
             try {
                 // 获取 CSRF token
@@ -336,6 +392,10 @@
                 addMessage('抱歉，连接失败。请检查网络连接或稍后重试。', 'assistant');
                 console.error('Error:', error);
             } finally {
+                // 清除计时器
+                clearInterval(timer);
+                waitingTimeEl.textContent = '';
+                
                 // 恢复输入和按钮
                 sendBtn.disabled = false;
                 input.disabled = false;
