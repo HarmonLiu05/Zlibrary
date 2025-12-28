@@ -16,7 +16,8 @@ from django.core.mail import send_mail
 from django.http import HttpResponse, JsonResponse
 from django.core.signing import dumps, loads
 from django.contrib.auth.models import User
-from .utils.rag import get_rag_assistant
+# 暂时注释RAG相关导入，避免依赖错误
+# from .utils.rag import get_rag_assistant
 # 首页和搜索
 def index(request):
     query = request.GET.get('q', '')
@@ -75,13 +76,91 @@ def profile(request):
     return render(request, 'profile.html', {'records': records})
 
 
+import zipfile
+import os
+import tempfile
+import requests
+from django.core.files import File
+from django.core.files.base import ContentFile
+
 # 批量导入书籍 (管理员用)
+@csrf_exempt
 def bulk_import(request):
     if request.method == "POST" and request.FILES['file']:
         file = request.FILES['file']
         df = pd.read_csv(file)  # 假设上传 CSV
+        
+        # 处理图片压缩包
+        image_files = {}
+        if 'images_zip' in request.FILES and request.FILES['images_zip']:
+            images_zip = request.FILES['images_zip']
+            
+            # 创建临时目录
+            with tempfile.TemporaryDirectory() as temp_dir:
+                # 保存ZIP文件
+                zip_path = os.path.join(temp_dir, 'images.zip')
+                with open(zip_path, 'wb') as f:
+                    for chunk in images_zip.chunks():
+                        f.write(chunk)
+                
+                # 解压ZIP文件
+                with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                    zip_ref.extractall(temp_dir)
+                
+                # 遍历解压后的文件
+                for root, dirs, files in os.walk(temp_dir):
+                    for filename in files:
+                        if filename.endswith(('.jpg', '.jpeg', '.png', '.gif', '.svg')):
+                            # 图片文件名（不含扩展名）作为ISBN号
+                            isbn = os.path.splitext(filename)[0]
+                            image_path = os.path.join(root, filename)
+                            image_files[isbn] = image_path
+        
+        # 导入图书数据
+        imported_books = []
         for _, row in df.iterrows():
-            Book.objects.create(title=row['title'], author=row['author'], isbn=row['isbn'], stock=row['stock'])
+            # 创建图书对象
+            book = Book.objects.create(
+                title=row['title'],
+                author=row['author'],
+                isbn=row['isbn'],
+                stock=row['stock'],
+                category=row.get('category', '综合'),  # 支持分类字段
+                publisher=row.get('publisher', ''),      # 支持出版社字段
+                publish_date=row.get('publish_date'),    # 支持出版日期字段
+                description=row.get('description', '')   # 支持内容简介字段
+            )
+            
+            # 检查是否有对应的图片文件
+            isbn = str(row['isbn'])
+            if isbn in image_files:
+                # 上传图片文件
+                with open(image_files[isbn], 'rb') as f:
+                    book.cover_image.save(f"{isbn}{os.path.splitext(image_files[isbn])[1]}", File(f))
+                book.save()
+            # 检查是否有图片链接
+            elif 'image_url' in row and pd.notna(row['image_url']):
+                image_url = row['image_url'].strip()
+                if image_url:
+                    try:
+                        # 下载图片
+                        response = requests.get(image_url)
+                        response.raise_for_status()  # 检查请求是否成功
+                        
+                        # 获取文件扩展名
+                        ext = os.path.splitext(image_url)[1] or '.jpg'
+                        # 确保扩展名是支持的图片格式
+                        if ext.lower() not in ['.jpg', '.jpeg', '.png', '.gif', '.svg']:
+                            ext = '.jpg'
+                        
+                        # 保存图片
+                        book.cover_image.save(f"{isbn}{ext}", ContentFile(response.content))
+                        book.save()
+                    except Exception as e:
+                        print(f"下载图片失败 (ISBN: {isbn}, URL: {image_url}): {e}")
+            
+            imported_books.append(book)
+        
         return redirect('index')
     return render(request, 'import.html')
 
@@ -157,39 +236,39 @@ def activate(request, token):
         return render(request, 'registration/activate_fail.html')
 
 
-# AI 聊天 API
-@csrf_exempt
-def chat_api(request):
-    """
-    AI 问答 API
-    接收 POST 请求，返回 JSON 格式的回答
-    """
-    if request.method != 'POST':
-        return JsonResponse({'error': '仅支持 POST 请求'}, status=405)
-    
-    try:
-        # 解析请求
-        data = json.loads(request.body)
-        question = data.get('question', '').strip()
-        
-        if not question:
-            return JsonResponse({'error': '请输入问题'}, status=400)
-        
-        # 调用 RAG 助手
-        rag_assistant = get_rag_assistant()
-        result = rag_assistant.query_books(question)
-        
-        return JsonResponse({
-            'success': True,
-            'answer': result['answer'],
-            'books': result['books'],
-            'total_found': result['total_found']
-        })
-    
-    except json.JSONDecodeError:
-        return JsonResponse({'error': '无效的 JSON 格式'}, status=400)
-    except Exception as e:
-        return JsonResponse({
-            'error': f'服务器错误: {str(e)}',
-            'hint': '请确认 OPENAI_API_KEY 已正确配置，并且已运行 python manage.py build_embeddings'
-        }, status=500)
+# AI 聊天 API (暂时注释，因为缺少 RAG 依赖)
+# @csrf_exempt
+# def chat_api(request):
+#     """
+#     AI 问答 API
+#     接收 POST 请求，返回 JSON 格式的回答
+#     """
+#     if request.method != 'POST':
+#         return JsonResponse({'error': '仅支持 POST 请求'}, status=405)
+#     
+#     try:
+#         # 解析请求
+#         data = json.loads(request.body)
+#         question = data.get('question', '').strip()
+#         
+#         if not question:
+#             return JsonResponse({'error': '请输入问题'}, status=400)
+#         
+#         # 调用 RAG 助手
+#         rag_assistant = get_rag_assistant()
+#         result = rag_assistant.query_books(question)
+#         
+#         return JsonResponse({
+#             'success': True,
+#             'answer': result['answer'],
+#             'books': result['books'],
+#             'total_found': result['total_found']
+#         })
+#     
+#     except json.JSONDecodeError:
+#         return JsonResponse({'error': '无效的 JSON 格式'}, status=400)
+#     except Exception as e:
+#         return JsonResponse({
+#             'error': f'服务器错误: {str(e)}',
+#             'hint': '请确认 OPENAI_API_KEY 已正确配置，并且已运行 python manage.py build_embeddings'
+#         }, status=500)

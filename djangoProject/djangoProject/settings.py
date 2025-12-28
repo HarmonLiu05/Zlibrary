@@ -26,7 +26,7 @@ SECRET_KEY = "django-insecure-n^fq($myc!msn$*7mye7!w#w=xk#ckp&j@opr*+&!1ra=6j295
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
 
 # Application definition
@@ -157,3 +157,13 @@ EMAIL_LOCALHOST = '127.0.0.1'
 EMAIL_HOST_PASSWORD = 'bswsnfksgqdcdfjc'  # 确保这里只有纯字母，没有空格
 # 关键：不要在这里写“图书管理系统”，直接赋值为你的邮箱
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+CSRF_TRUSTED_ORIGINS = [
+    'http://127.0.0.1:8000',
+    'http://localhost:8000',
+]
+
+# 解决CSRF验证失败的额外配置
+CSRF_COOKIE_SECURE = False  # 开发环境下设置为False，生产环境下设置为True
+CSRF_USE_SESSIONS = False  # 使用Cookie而不是Session存储CSRF令牌
+CSRF_HEADER_NAME = 'HTTP_X_CSRFTOKEN'  # 自定义CSRF头名称
+CSRF_COOKIE_NAME = 'csrftoken'  # CSRF令牌的Cookie名称
