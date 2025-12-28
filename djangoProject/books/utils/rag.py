@@ -19,9 +19,9 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # 配置
-# 使用用户主目录避免中文路径问题
-import tempfile
-DATA_DIR = Path(tempfile.gettempdir()) / "booknest_rag_data"
+# 使用项目根目录下的 rag_data 文件夹存储索引数据
+# 这样可以确保在不同主机上都能正常使用
+DATA_DIR = Path(settings.BASE_DIR) / "rag_data"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 FAISS_INDEX_PATH = DATA_DIR / "faiss_index.bin"
@@ -29,7 +29,7 @@ BOOK_METADATA_PATH = DATA_DIR / "book_metadata.pkl"
 
 # 动态设置向量维度（根据使用的模型）
 if os.getenv("API_PROVIDER", "openai").lower() == "modelscope":
-    EMBEDDING_DIM = 4096  # Qwen/Qwen3-Embedding-8B 的维度
+    EMBEDDING_DIM = 4096  # DeepSeek/Qwen Embedding 模型的维度
 else:
     EMBEDDING_DIM = 1536  # OpenAI text-embedding-ada-002 的维度
 
@@ -43,14 +43,15 @@ FAISS_INDEX_PATH.parent.mkdir(exist_ok=True)
 def create_embeddings():
     """
     创建 Embeddings 实例
-    支持 OpenAI 和 ModelScope 两种 API
+    支持 OpenAI 和 ModelScope (DeepSeek) 两种 API
     """
     if API_PROVIDER == "modelscope":
-        # 使用 ModelScope API
+        # 使用 ModelScope API with DeepSeek Embedding
+        # 注意：DeepSeek 可能没有独立的 Embedding 模型，这里使用 Qwen Embedding
         return OpenAIEmbeddings(
             openai_api_key=os.getenv("MODELSCOPE_ACCESS_TOKEN"),
             openai_api_base="https://api-inference.modelscope.cn/v1",
-            model="Qwen/Qwen3-Embedding-8B"  # Qwen 官方最新向量模型
+            model="Qwen/Qwen3-Embedding-8B"  # 向量模型（DeepSeek暂无独立Embedding，使用Qwen）
         )
     else:
         # 使用官方 OpenAI API（默认）
@@ -63,14 +64,14 @@ def create_embeddings():
 def create_llm():
     """
     创建 LLM 实例
-    支持 OpenAI 和 ModelScope 两种 API
+    支持 OpenAI 和 ModelScope (DeepSeek) 两种 API
     """
     if API_PROVIDER == "modelscope":
-        # 使用 ModelScope API
+        # 使用 ModelScope API with DeepSeek-V3.2
         return ChatOpenAI(
             openai_api_key=os.getenv("MODELSCOPE_ACCESS_TOKEN"),
             openai_api_base="https://api-inference.modelscope.cn/v1",
-            model="Qwen/Qwen2.5-Coder-32B-Instruct",  # ModelScope 模型
+            model="deepseek-ai/DeepSeek-V3.2",  # DeepSeek-V3.2 对话模型
             temperature=0.7
         )
     else:
@@ -91,7 +92,15 @@ class RAGAssistant:
         self.index = None
         self.book_metadata = []
         self._load_index()
+        
+        # 显示使用的模型信息
         print(f"✅ RAG 助手已初始化 (API 提供商: {API_PROVIDER.upper()})")
+        if API_PROVIDER == "modelscope":
+            print(f"💬 对话模型: deepseek-ai/DeepSeek-V3.2")
+            print(f"🔍 Embedding 模型: Qwen/Qwen3-Embedding-8B")
+        else:
+            print(f"💬 对话模型: gpt-3.5-turbo")
+            print(f"🔍 Embedding 模型: text-embedding-ada-002")
     
     def _load_index(self):
         """加载 FAISS 索引和书籍元数据"""
@@ -218,6 +227,8 @@ class RAGAssistant:
         :param retrieved_books: 检索到的书籍列表
         :return: AI 生成的回答
         """
+        print(f"🤖 正在使用 DeepSeek-V3.2 生成回答...")  # 添加日志
+        
         if not retrieved_books:
             return "抱歉，我没有找到相关的书籍。您可以尝试换一个问题，或者直接在首页搜索书名和作者。"
         
